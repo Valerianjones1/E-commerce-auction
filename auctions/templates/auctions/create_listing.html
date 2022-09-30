@@ -1,0 +1,14 @@
+{% extends 'auctions/layout.html' %} {% block body %}
+
+<form action="{% url 'createlist' %}" method="post">
+  {% csrf_token %}
+  <ul style="list-style: none" class="forms">
+    {% for f in form %}
+    <h1 style="font-size: 15px; font-weight: normal">{{f.label}}</h1>
+    <li>{{f}}</li>
+    {% endfor %}
+  </ul>
+  <input type="submit" value="Submit" />
+</form>
+
+{% endblock %}
