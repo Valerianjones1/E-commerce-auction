@@ -9,7 +9,9 @@ from .forms import AuctionListingForm
 
 
 def index(request):
-    return render(request, "auctions/index.html")
+    active_list = AuctionListing.objects.all()
+    print(active_list)
+    return render(request, "auctions/index.html", {"active_list": active_list})
 
 
 def login_view(request):
@@ -80,3 +82,8 @@ def create_listing(request):
     else:
         form = AuctionListingForm()
     return render(request, "auctions/create_listing.html", {"form": form})
+
+
+def listing_view(request):
+
+    return render(request, "auctions/listing_page.html",)
