@@ -4,7 +4,7 @@
 <h2>Active Listings</h2>
   <li style="list-style-type: none">
     {% for auc in active_list %}
-    <div
+    <a href="{% url 'auctionpage' auc.id %}"><div
   class="auction-item"
   style="
     display: inline-block;
@@ -21,7 +21,7 @@
       <img
         class="active-img"
         src="{{auc.url_image}}"
-        style="float: left; height: auto; width: 350px"
+        style="float: left; height: auto; width: 200px; padding-right: 50px;"
       />
     </div>
     <div
@@ -30,6 +30,7 @@
         padding-top: 30px;
         font-family: sans-serif;
         text-align: left;
+        color:black;
         width: calc(100% - 350px);
       "
     >
@@ -46,4 +47,5 @@
     </div>
   </li>
 </div>
+</a>
 {% endfor %} {% endblock %}

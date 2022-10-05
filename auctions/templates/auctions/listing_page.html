@@ -1,1 +1,44 @@
-{% extends "auctions/layout.html" %} {% block body %} {% endblock %}
+{% extends "auctions/layout.html" %} {% block title %}{{auction.listing_name}}
+{% endblock %} {% block body %}
+<div
+  style="
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+    width: 50%;
+    float: none;
+  "
+>
+  <li style="list-style-type: none">
+    <img
+      src="{{auction.url_image}}"
+      style="
+        display: block;
+        height: auto;
+        width: 210px;
+        margin-left: auto;
+        margin-right: auto;
+      "
+    />
+    <div
+      class="text"
+      style="padding-left: 100px; font-family: sans-serif; padding-top: 30px"
+    >
+      <h1 style="font-size: 20px; font-weight: bold">
+        {{auction.listing_name}}
+      </h1>
+      <h2 style="font-size: 20px; font-weight: bold">
+        Starting Bid: ${{auction.starting_bid}}
+      </h2>
+
+      <form action="{% url 'auctionpage' auction.id %}" method="post">
+        {% csrf_token %} {% for f in form %}
+        <p>Amount: {{f}} <input type="submit" value="Bid" /></p>
+        {% endfor %}
+      </form>
+      <h2 style="font-size: 20px; font-weight: bold">Description</h2>
+      <p>{{auction.description}}</p>
+    </div>
+  </li>
+</div>
+{%endblock%}

@@ -7,3 +7,7 @@ class AuctionListingForm(forms.Form):
     description = forms.CharField(widget=forms.Textarea, label="Description")
     starting_bid = forms.FloatField(label="Starting bid:")
     url_image = forms.URLField(max_length=100)
+
+
+class BidForm(forms.Form):
+    bid = forms.FloatField()
