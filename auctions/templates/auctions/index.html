@@ -3,7 +3,7 @@
 
 <h2>Active Listings</h2>
   <li style="list-style-type: none">
-    {% for auc in active_list %}
+    {% for auc,bid in active_list %}
     <a href="{% url 'auctionpage' auc.id %}"><div
   class="auction-item"
   style="
@@ -38,9 +38,16 @@
       <ul style="text-align: left; font-weight: bold; font-size: 20px">
         {{auc.listing_name}}
       </ul>
+      {% if bid %}
+      <ul>
+        Price: ${{bid}}
+      </ul>
+      {% else %}
       <ul>
         Price: ${{auc.starting_bid}}
       </ul>
+      {% endif %}
+      
       <ul>
         {{auc.description}}
       </ul>
