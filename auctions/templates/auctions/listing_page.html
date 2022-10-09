@@ -27,7 +27,7 @@
       <h1 style="font-size: 20px; font-weight: bold">
         {{auction.listing_name}}
       </h1>
-      {% if not auction.closed %}
+      {% if auction.closed %}
       <div class="alert alert-warning" role="alert">
   This Listing is closed!
 </div>
@@ -51,23 +51,36 @@
 
       
       <p>Seller: {{auction.seller}}</p>
+      <h2 style="font-size: 20px; font-weight: bold; padding-top:10px">Description</h2>
+      <p>{{auction.description}}</p>
       {% if user.is_authenticated and user.username != auction.seller %}
       <form action="{% url 'auctionpage' auction.id %}" method="post">
         {% csrf_token %} {% for f in form %}
-        <p>Amount: {{f}} <input type="submit" value="Bid" /></p>
+        <h2 style="font-size: 20px; font-weight: bold;">{{f.label}}</h2>
+        <p> {{f}} <input type="submit" value="Submit" /></p>
         {% endfor %}
       </form>
+      <form action="{% url 'auctionpage' auction.id %}" method="post">
+        {% csrf_token %} {% for f in comment_form %}
+        <h2 style="font-size: 20px; font-weight: bold;" >{{f.label}}</h2>
+        <p> {{f}} <input type="submit" value="Submit" /></p>
+        {% endfor %}
+      </form>
+
       {% endif %}
       {% endif %}
-      
+      <h2 style="font-size: 20px; font-weight: bold; padding-top:10px">Comments</h2>
+      {% if comment %}
+      {% for c in comment %}
+      <p>{{c.comment_section}}</p>
+      {% endfor %}
+      {% endif %}
       {% if user.username == auction.seller %}
       <form action="{% url 'auctionpage' auction.id %}" method="GET">
       {% csrf_token %}
       <button type="submit" name='close' value={{auction.id}} >Close the Bid</button>
       {% endif %}
       {% endif %}
-      <h2 style="font-size: 20px; font-weight: bold; padding-top:10px">Description</h2>
-      <p>{{auction.description}}</p>
     </div>
   </li>
 </div>

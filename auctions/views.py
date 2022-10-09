@@ -1,4 +1,5 @@
 from email.policy import default
+from tabnanny import check
 from django.contrib.auth import authenticate, login, logout
 from django.db import IntegrityError
 from django.http import HttpResponse, HttpResponseRedirect
@@ -7,8 +8,8 @@ from django.contrib import messages
 from django.urls import reverse
 import datetime
 
-from .models import AuctionListingPage, User,  Bids, Comments
-from .forms import AuctionListingForm, BidForm
+from .models import AuctionListingPage, User,  Bids, Comments, Watchlist
+from .forms import AuctionListingForm, BidForm, CommentForm
 
 
 def index(request):
@@ -103,28 +104,25 @@ def create_listing(request):
 def listing_view(request, auction_id):
     if request.method == "POST":
         form = BidForm(request.POST)
+        comment_form = CommentForm(request.POST)
+        auction_page = AuctionListingPage.objects.get(pk=auction_id)
         if form.is_valid():
             bid = form.cleaned_data["bid"]
             try:
                 bd_0 = list(Bids.objects.filter(auction_id=auction_id))
-                if len(bd_0) > 1:
-                    bd_0 = bd_0[-1]
-                elif len(bd_0) == 1:
-                    bd_0 = bd_0[0]
+                bd_0 = check_length(bd_0)
             except Bids.DoesNotExist:
                 bd_0 = 0
-            auction_page = AuctionListingPage.objects.get(pk=auction_id)
             if bd_0:
                 if float(bid) > auction_page.starting_bid and float(bid) > bd_0.bid:
                     bid_date = str(datetime.datetime.now()).split(".")[0]
                     bd = Bids(auction_id=auction_id,
-                              bid=bid, bid_date=bid_date)
+                              bid=bid, bid_date=bid_date, user_id=request.user.id)
                     print(bd.bid)
                     bd.save()
-                    return render(request, "auctions/listing_page.html", {"auction": auction_page, "form": form, "bid": bd, "winner": ""})
+                    return render(request, "auctions/listing_page.html", {"auction": auction_page, "form": BidForm, "comment_form": CommentForm(), "bid": bd, "winner": ""})
                 else:
-                    messages.info(
-                        request, "You can not bid lower than a starting price or current price!")
+
                     return render(request, "auctions/listing_page.html", {"message":  "You can not bid lower than a starting price or current price!"})
             else:
                 if float(bid) > auction_page.starting_bid:
@@ -133,12 +131,19 @@ def listing_view(request, auction_id):
                               bid=bid, bid_date=bid_date)
                     print(bd.bid)
                     bd.save()
-                    return render(request, "auctions/listing_page.html", {"auction": auction_page, "form": form, "bid": bd, "winner": ""})
+                    return render(request, "auctions/listing_page.html", {"auction": auction_page, "form": BidForm(), "bid": bd, "winner": ""})
                 else:
-                    messages.info(
-                        request, "You can not bid lower than a starting price or current price!")
                     return HttpResponseRedirect(reverse("auctionpage"))
-
+        elif comment_form.is_valid():
+            comment = comment_form.cleaned_data["comments"]
+            cmnts = Comments(auction_id=auction_id,
+                             user_id=request.user.id, comment_section=comment)
+            cmnts.save()
+            try:
+                comment = list(Comments.objects.filter(auction_id=auction_id))
+            except Comments.DoesNotExist:
+                comment = None
+            return render(request, "auctions/listing_page.html", {"auction": auction_page, "form": form, "winner": "", "comment_form": CommentForm(), "comment": comment})
     else:
         try:
             auction_page = AuctionListingPage.objects.get(pk=auction_id)
@@ -146,32 +151,40 @@ def listing_view(request, auction_id):
         except Bids.DoesNotExist:
             bd = None
         form = BidForm()
-        if len(bd) > 1:
-            bd = bd[-1]
-        elif len(bd) == 1:
-            bd = bd[0]
+        comment_form = CommentForm()
+        bd = check_length(bd)
+
+        try:
+            comment = list(Comments.objects.filter(auction_id=auction_id))
+        except Comments.DoesNotExist:
+            comment = None
         if request.GET.get("close"):
             try:
                 active_list = list(Bids.objects.filter(auction_id=auction_id))
             except Bids.DoesNotExist:
                 active_list = ""
-            if len(active_list) > 1:
-                active_list = active_list[-1]
-            elif len(active_list) == 1:
-                active_list = active_list[0]
+            active_list = check_length(active_list)
             winner_name = User.objects.get(pk=active_list.user_id)
             winner_name.auction_id = auction_id
             auction_page.closed = True
             auction_page.save()
             winner_name.save()
-            return render(request, "auctions/listing_page.html", {"auction": auction_page, "form": form, "bid": bd, "winner": active_list})
+            return render(request, "auctions/listing_page.html", {"auction": auction_page, "form": form, "comment": comment, "bid": bd, "winner": active_list, "comment_form": comment_form})
 
-    return render(request, "auctions/listing_page.html", {"auction": auction_page, "form": form, "bid": bd, "winner": ""})
+    return render(request, "auctions/listing_page.html", {"auction": auction_page, "form": form, "comment_form": comment_form, "bid": bd, "winner": "", "comment": comment})
 
 
 def show_watchlist(request):
     user_id = request.user.id
+    return render(request, "auctions/watch_list.html")
 
+
+def check_length(array):
+    if len(array) > 1:
+        array = array[-1]
+    elif len(array) == 1:
+        array = array[0]
+    return array
 
 # def check_winner(request):
 #     #user.id = user.id

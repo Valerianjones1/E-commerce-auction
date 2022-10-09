@@ -10,4 +10,8 @@ class AuctionListingForm(forms.Form):
 
 
 class BidForm(forms.Form):
-    bid = forms.FloatField()
+    bid = forms.FloatField(label="Bid an amount")
+
+
+class CommentForm(forms.Form):
+    comments = forms.CharField(widget=forms.Textarea, label="Add a comment")
