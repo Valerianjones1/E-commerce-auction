@@ -27,6 +27,11 @@
       <h1 style="font-size: 20px; font-weight: bold">
         {{auction.listing_name}}
       </h1>
+      {% if user.is_authenticated %}
+      <form action="{% url 'watchlist' %}" method="POST">
+      {% csrf_token %}
+      <button type="submit" name='watchlist' value={{auction.id}} style="margin-top:15px;margin-bottom: 20px;" >Add to a Watch List</button>
+      {% endif %}
       {% if auction.closed %}
       <div class="alert alert-warning" role="alert">
   This Listing is closed!

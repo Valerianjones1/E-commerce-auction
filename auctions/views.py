@@ -176,6 +176,51 @@ def listing_view(request, auction_id):
 
 def show_watchlist(request):
     user_id = request.user.id
+    if request.POST.get("watchlist"):
+        auction_id = request.POST.get("watchlist")
+        print(auction_id)
+        wl = Watchlist(user_id=user_id, auc_id=auction_id)
+        wl.save()
+        bids = []
+        items_l = []
+        try:
+            wl = list(Watchlist.objects.all())
+        except Watchlist.DoesNotExist:
+            wl = None
+        if wl:
+            for w in wl:
+                if w.user_id == request.user.id:
+                    try:
+                        bds = check_length(
+                            list(Bids.objects.filter(auction_id=w.auc_id)))
+                    except Bids.DoesNotExist:
+                        bds = None
+                    auc_page = AuctionListingPage.objects.get(pk=w.auc_id)
+                    items_l.append(auc_page)
+                    bids.append(bds)
+        return render(request, "auctions/watch_list.html", {"bids_item": zip(items_l, bids)})
+    else:
+        bids = []
+        items_l = []
+        try:
+            wl = list(Watchlist.objects.all())
+        except Watchlist.DoesNotExist:
+            wl = None
+        if wl:
+            for w in wl:
+                if w.user_id == request.user.id:
+                    try:
+                        bds = check_length(
+                            list(Bids.objects.filter(auction_id=w.auc_id)))
+                    except Bids.DoesNotExist:
+                        bds = None
+                    auc_page = AuctionListingPage.objects.get(pk=w.auc_id)
+                    items_l.append(auc_page)
+                    bids.append(bds)
+        return render(request, "auctions/watch_list.html", {"bids_item": zip(items_l, bids)})
+
+        pass
+
     return render(request, "auctions/watch_list.html")
 
 
