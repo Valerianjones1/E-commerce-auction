@@ -29,6 +29,7 @@ class Comments(models.Model):
     auction_id = models.IntegerField(default=0)
     user_id = models.IntegerField(default=0)
     comment_section = models.CharField(max_length=200)
+    date = models.CharField(max_length=200, default="")
 
 
 class Watchlist(models.Model):

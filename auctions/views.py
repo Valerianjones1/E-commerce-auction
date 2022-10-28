@@ -6,6 +6,7 @@ from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import render
 from django.contrib import messages
 from django.urls import reverse
+from django.contrib.auth.decorators import login_required
 import datetime
 
 from .models import AuctionListingPage, User,  Bids, Comments, Watchlist
@@ -82,6 +83,7 @@ def register(request):
         return render(request, "auctions/register.html")
 
 
+@login_required
 def create_listing(request):
     if request.method == "POST":
         form = AuctionListingForm(request.POST)
@@ -103,11 +105,12 @@ def create_listing(request):
 
 def listing_view(request, auction_id):
     if request.method == "POST":
+        print(request.POST)
         form = BidForm(request.POST)
         comment_form = CommentForm(request.POST)
         auction_page = AuctionListingPage.objects.get(pk=auction_id)
         if form.is_valid():
-            bid = form.cleaned_data["bid"]
+            bid = float(form.cleaned_data["bid"])
             try:
                 bd_0 = list(Bids.objects.filter(auction_id=auction_id))
                 bd_0 = check_length(bd_0)
@@ -123,7 +126,7 @@ def listing_view(request, auction_id):
                     return render(request, "auctions/listing_page.html", {"auction": auction_page, "form": BidForm, "comment_form": CommentForm(), "bid": bd, "winner": ""})
                 else:
 
-                    return render(request, "auctions/listing_page.html", {"message":  "You can not bid lower than a starting price or current price!"})
+                    return render(request, "auctions/listing_page.html", {"auction": auction_page, "form": BidForm(), "winner": ""})
             else:
                 if float(bid) > auction_page.starting_bid:
                     bid_date = str(datetime.datetime.now()).split(".")[0]
@@ -133,18 +136,37 @@ def listing_view(request, auction_id):
                     bd.save()
                     return render(request, "auctions/listing_page.html", {"auction": auction_page, "form": BidForm(), "bid": bd, "winner": ""})
                 else:
-                    return HttpResponseRedirect(reverse("auctionpage"))
+                    return render(request, "auctions/listing_page.html", {"auction": auction_page, "form": BidForm(), "winner": ""})
         elif comment_form.is_valid():
             comment = comment_form.cleaned_data["comments"]
             cmnts = Comments(auction_id=auction_id,
-                             user_id=request.user.id, comment_section=comment)
+                             user_id=request.user.id, comment_section=comment, date=str(datetime.datetime.now()).split(".")[0])
+
             cmnts.save()
             try:
-                comment = list(Comments.objects.filter(auction_id=auction_id))
+                comment = list(Comments.objects.filter(
+                    auction_id=auction_id).filter(user_id=request.user.id))
             except Comments.DoesNotExist:
                 comment = None
-            return render(request, "auctions/listing_page.html", {"auction": auction_page, "form": form, "winner": "", "comment_form": CommentForm(), "comment": comment})
+            try:
+                user = User.objects.get(pk=request.user.id)
+            except User.DoesNotExist:
+                user = None
+            return render(request, "auctions/listing_page.html", {"auction": auction_page, "form": form, "winner": "", "comment_form": CommentForm(), "user": user, "comment": comment[::-1]})
     else:
+        try:
+            watchlist = (Watchlist.objects.filter(
+                auc_id=auction_id, user_id=request.user.id))
+        except:
+            watchlist = ""
+        if len(watchlist) == 1:
+            watchlist = True
+        elif len(watchlist) == 0:
+            watchlist = False
+
+        else:
+            watchlist = 1
+            watchlist = True
         try:
             auction_page = AuctionListingPage.objects.get(pk=auction_id)
             bd = list(Bids.objects.filter(auction_id=auction_id))
@@ -163,21 +185,26 @@ def listing_view(request, auction_id):
                 active_list = list(Bids.objects.filter(auction_id=auction_id))
             except Bids.DoesNotExist:
                 active_list = ""
-            active_list = check_length(active_list)
-            winner_name = User.objects.get(pk=active_list.user_id)
-            winner_name.auction_id = auction_id
-            auction_page.closed = True
-            auction_page.save()
-            winner_name.save()
-            return render(request, "auctions/listing_page.html", {"auction": auction_page, "form": form, "comment": comment, "bid": bd, "winner": active_list, "comment_form": comment_form})
+            if active_list:
+                active_list = check_length(active_list)
+                winner_name = User.objects.get(pk=active_list.user_id)
+                winner_name.auction_id = auction_id
+                auction_page.closed = True
+                auction_page.save()
+                winner_name.save()
+                return render(request, "auctions/listing_page.html", {"auction": auction_page, "watchlist": watchlist, "form": form, "comment": comment, "bid": bd, "winner": active_list, "comment_form": comment_form})
+            else:
+                # DO LOGIC WHEN OWNER OF ITEM WANTS TO CLOSE AUCTION WITHOUT ANY BIDS
+                # DO SOME ALERT
+                return render(request, "auctions/listing_page.html", {"auction": auction_page, "watchlist": watchlist, "form": form, "comment": comment, "bid": bd, "winner": "", "comment_form": comment_form})
 
-    return render(request, "auctions/listing_page.html", {"auction": auction_page, "form": form, "comment_form": comment_form, "bid": bd, "winner": "", "comment": comment})
+    return render(request, "auctions/listing_page.html", {"auction": auction_page, "form": form, "watchlist": watchlist, "comment_form": comment_form, "bid": bd, "winner": "", "comment": comment[::-1]})
 
 
 def show_watchlist(request):
     user_id = request.user.id
-    if request.POST.get("watchlist"):
-        auction_id = request.POST.get("watchlist")
+    if request.POST.get("watch"):
+        auction_id = request.POST.get("watch")
         print(auction_id)
         wl = Watchlist(user_id=user_id, auc_id=auction_id)
         wl.save()
@@ -199,6 +226,29 @@ def show_watchlist(request):
                     items_l.append(auc_page)
                     bids.append(bds)
         return render(request, "auctions/watch_list.html", {"bids_item": zip(items_l, bids)})
+    elif request.POST.get("unwatch"):
+        bids = []
+        items_l = []
+        auction_id = request.POST.get("unwatch")
+        wl = Watchlist.objects.get(auc_id=auction_id, user_id=user_id)
+        wl.delete()
+        watchlist = False
+        try:
+            wl = list(Watchlist.objects.all())
+        except Watchlist.DoesNotExist:
+            wl = None
+        if wl:
+            for w in wl:
+                if w.user_id == request.user.id:
+                    try:
+                        bds = check_length(
+                            list(Bids.objects.filter(auction_id=w.auc_id)))
+                    except Bids.DoesNotExist:
+                        bds = None
+                    auc_page = AuctionListingPage.objects.get(pk=w.auc_id)
+                    items_l.append(auc_page)
+                    bids.append(bds)
+        return render(request, "auctions/watch_list.html", {"bids_item": zip(items_l, bids), "watchlist": watchlist})
     else:
         bids = []
         items_l = []
@@ -219,9 +269,18 @@ def show_watchlist(request):
                     bids.append(bds)
         return render(request, "auctions/watch_list.html", {"bids_item": zip(items_l, bids)})
 
-        pass
 
-    return render(request, "auctions/watch_list.html")
+def show_categories(request):
+    auctions = list(AuctionListingPage.objects.all())
+    categories = {}
+    for auction in auctions:
+        category = auction.category
+        if category not in categories:
+            categories[category] = []
+            categories[category].append(auction)
+        else:
+            categories[category].append(auction)
+    return render(request, "auctions/categories.html", {"categories": categories.items()})
 
 
 def check_length(array):
@@ -241,3 +300,10 @@ def check_length(array):
 #         return render(request, "auctions/listing_page.html", {"winner": active_list[-1]})
 #     else:
 #         return render(request, "auctions/listing_page.html", {"winner": ""})
+
+
+# DO ALERTS FOR BIDS
+# DO COMMENTS NAME IN MODE
+# DO CATEGORIES
+# DO CLOSE BID
+# DO WATCH BUTTON AND CONDITIONS IN LAYOUT

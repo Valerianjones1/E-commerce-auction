@@ -29,7 +29,11 @@
       <li class="nav-item">
         <a class="nav-link" href="{% url 'watchlist' %}">Watch List</a>
       </li>
-      {% endif %} {% if user.is_authenticated %}
+      {% endif %}
+      <li class="nav-item">
+        <a class="nav-link" href="{% url 'categories' %}">Categories</a>
+      </li>
+      {% if user.is_authenticated %}
       <li class="nav-item">
         <a class="nav-link" href="{% url 'logout' %}">Log Out</a>
       </li>
